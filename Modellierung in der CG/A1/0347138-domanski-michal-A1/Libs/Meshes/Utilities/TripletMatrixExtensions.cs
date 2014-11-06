@@ -4,9 +4,18 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using CSparse.Double;
+using SharpDX;
 
 namespace Meshes.Utilities
 {
+    public static class Vector3Extensions
+    {
+        public static double Cotan(this Vector3 lhs, Vector3 rhs)
+        {
+            return (double) Vector3.Dot(lhs, rhs) / Vector3.Cross(lhs, rhs).Length();
+        }
+    }
+
     public static class TripletMatrixExtensions
     {
         public static int RowCount(this TripletMatrix matrix)

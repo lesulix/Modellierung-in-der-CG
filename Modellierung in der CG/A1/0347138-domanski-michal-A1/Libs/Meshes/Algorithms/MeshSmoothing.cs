@@ -148,9 +148,10 @@ namespace Meshes.Algorithms
             /// get current world positions            
             MeshLaplacian.GetEuclideanCoordinates(mesh, out xx, out xy, out xz);
 
+            var laplacian = MeshLaplacian.CreateLaplacian(mesh, -Lambda, 1f);
+
             foreach (var currentIteration in Enumerable.Range(0, iterationCount))
             {
-                var laplacian = MeshLaplacian.CreateLaplacian(mesh, Lambda, 1f);
                 MeshLaplacian.ComputeDifferentialCoordinates(laplacian.Compress(), xx, xy, xz, out dx, out dy, out dz);
 
                 xx = dx;

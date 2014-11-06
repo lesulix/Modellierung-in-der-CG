@@ -20,6 +20,8 @@ namespace Meshes.Algorithms
     /// </summary>
     public static class MeshLaplacian
     {
+        private const double EPSILON = 0.1d;
+
         public enum Type
         {
             Uniform, Cotan, MeanValue,
@@ -107,10 +109,10 @@ namespace Meshes.Algorithms
             foreach (var currentVertex in mesh.Vertices)
             {
                 // Diagonal entry v(i,i) = eye*1 + λ*L(i,i)
-                var diagonalVal = eye - GetNormalized(currentVertex.Vertices.Count(), currentVertex.VertexCount(), normalized) * lambda;
+                var diagonalVal = eye + GetNormalized(currentVertex.Vertices.Count(), currentVertex.VertexCount(), normalized) * lambda;
                 L.Entry(currentVertex.Index, currentVertex.Index, diagonalVal);
                 currentVertex.Vertices.Apply(nb => 
-                    L.Entry(currentVertex.Index, nb.Index, GetNormalized(1, currentVertex.VertexCount(), normalized) * lambda));
+                    L.Entry(currentVertex.Index, nb.Index, GetNormalized(-1, currentVertex.VertexCount(), normalized) * lambda));
             }
 
             return L;
@@ -131,12 +133,31 @@ namespace Meshes.Algorithms
         /// </summary>        
         public static TripletMatrix CreateCotanLaplacian(TriangleMesh mesh, double lambda = 1.0, double eye = 0.0, bool normalized = false)
         {
-            var n = mesh.Vertices.Count;
-            int nz = mesh.Vertices.Aggregate(0, (c, x) => c += x.VertexCount());
-            var L = new TripletMatrix(n, n, nz + n);
+            var vertexCount = mesh.Vertices.Count;
+            var neighbourCount = mesh.Vertices.Aggregate(0, (c, x) => c += x.VertexCount());
+            var L = new TripletMatrix(vertexCount, vertexCount, neighbourCount + vertexCount);
 
-            /// TODO_A1 Task 3:
-            /// 3.	Implement cotangents Laplacian matrix (medium) 
+            PrecomputeTraits(mesh);
+            foreach (var currentVertex in mesh.Vertices)
+            {
+                var sumOfAreas = 0d;
+                var sumOfWeights = 0d;
+
+                foreach (var halfEdge in currentVertex.Halfedges)
+                {
+                    sumOfAreas += halfEdge.Traits.VoronoiRegionArea;
+                    sumOfWeights += halfEdge.Traits.Cotan;
+                }
+
+                sumOfAreas = Math.Max(EPSILON, normalized ? sumOfAreas : 1d);
+
+                L.Entry(currentVertex.Index, currentVertex.Index, eye + lambda * sumOfWeights/sumOfAreas);
+
+                foreach (var halfEdge in currentVertex.Halfedges)
+                {
+                    L.Entry(currentVertex.Index, halfEdge.ToVertex.Index, lambda * -halfEdge.Traits.Cotan/sumOfAreas);
+                }
+            }
       
             return L;
         }
@@ -267,21 +288,33 @@ namespace Meshes.Algorithms
         {
             /// compute all cotans
             /// store each cotan at the foot of each halfedge
-            foreach (var ti in mesh.Faces)
+            foreach (var face in mesh.Faces)
             {
 
                 /// compute cotans
-                foreach (var hi in ti.Halfedges)
+                foreach (var halfedge in face.Halfedges)
                 {
+                    var xiToY = halfedge.ToVertex.Traits.Position - halfedge.FromVertex.Traits.Position;
+                    var xiToYprev = halfedge.Opposite.Previous.FromVertex.Traits.Position - halfedge.FromVertex.Traits.Position;
+                    var xiToYnext = halfedge.Previous.FromVertex.Traits.Position - halfedge.FromVertex.Traits.Position;
+                    var yToYNext = xiToYnext - xiToY;
+                    var yPrevToY = xiToY - xiToYprev;
 
+                    // cot(alpha) = (u * v) / |u x v|
+                    var cotanVoronoiAlpha = yToYNext.Cotan(-xiToY);
+                    var cotanVoronoiBeta = (-yToYNext).Cotan(-xiToYnext);
+                    
+                    // voronoi(V) = 1/8 * (|u|²*cot(beta) + |v|²*cotan(alpha)
+                    var voronoiArea = 0.125d * (xiToY.LengthSquared() * cotanVoronoiBeta + xiToYnext.LengthSquared() * cotanVoronoiAlpha);
 
-                    /// TODO_A1 Task 3:
-                    /// Implement (extended) cotangents Laplacian matrix (easy)
-                    /// here it is recommended to precompute cotans and areas for all faces/halfedges
-                    /// You should call it at the beginning of CreateCotanLaplacian and CreateExtendedCotanLaplacian.
+                    var cotanMeanCurvAlpha = (-xiToYprev).Cotan(yPrevToY);
+                    var cotanMeanCurvBeta = (-xiToYnext).Cotan(-yToYNext);
 
-                    hi.Traits.Cotan = 0;
-                    /// compute further needed traits...
+                    // Inner term of sum for K(x) : 0.5 * (cotan(alpha) + cotan(beta)) * (x - xi)
+                    var meanCurvatureScalar = 0.5d * (cotanMeanCurvAlpha + cotanMeanCurvBeta);
+
+                    halfedge.Traits.Cotan = meanCurvatureScalar;
+                    halfedge.Traits.VoronoiRegionArea = voronoiArea;
                 }
             }
         }
