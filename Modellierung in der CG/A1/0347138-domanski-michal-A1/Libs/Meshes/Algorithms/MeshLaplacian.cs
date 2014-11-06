@@ -20,7 +20,7 @@ namespace Meshes.Algorithms
     /// </summary>
     public static class MeshLaplacian
     {
-        private const double EPSILON = 0.1d;
+        private const double EPSILON = 0.0000000001d;
 
         public enum Type
         {
@@ -207,15 +207,13 @@ namespace Meshes.Algorithms
         /// </summary>        
         public static TripletMatrix CreateExtendedCotanLaplacian(TriangleMesh mesh, double lambda = 1.0, bool normalized = true)
         {
-            var n = mesh.Vertices.Count;
-            int nz = mesh.Vertices.Aggregate(0, (c, x) => c += x.VertexCount());
-            var L = new TripletMatrix(2 * n, n, nz + 2 * n, true);
+            var vertexCount = mesh.Vertices.Count;
 
-            /// TODO_A1 Task 3:
-            /// Implement (extended) cotangents Laplacian matrix (easy)
-            /// This function is used by Tasks 5-7.
- 
-            return L;
+            var L = CreateCotanLaplacian(mesh, 1f, 0f, normalized);
+            var identity = new TripletMatrix(vertexCount, vertexCount, vertexCount).SetIdentity();
+            identity.MultiplyBy(lambda);
+
+            return L.ConcatenateBelow(identity);
         }
 
         /// <summary>
