@@ -77,15 +77,7 @@ namespace Meshes.Algorithms
         /// <summary>
         /// 
         /// </summary>
-        public double Lambda
-        {
-            get { return this.lambda; }
-            set
-            {
-                this.lambda = value;
-                this.hasMatrix = false;
-            }
-        }
+        public double Lambda { get; set; }
 
         /// <summary>
         /// 
@@ -102,7 +94,6 @@ namespace Meshes.Algorithms
         /// </summary>
         public void Clear()
         {
-            this.hasMatrix = false;
         }
 
         
@@ -143,7 +134,6 @@ namespace Meshes.Algorithms
         {
             /// output vertex positions (after solving/smoothing)
             double[] xx, xy, xz;
-            double[] dx, dy, dz;
 
             /// get current world positions            
             MeshLaplacian.GetEuclideanCoordinates(mesh, out xx, out xy, out xz);
@@ -152,6 +142,8 @@ namespace Meshes.Algorithms
 
             foreach (var currentIteration in Enumerable.Range(0, iterationCount))
             {
+                double[] dx, dy, dz;
+
                 MeshLaplacian.ComputeDifferentialCoordinates(laplacian.Compress(), xx, xy, xz, out dx, out dy, out dz);
 
                 xx = dx;
@@ -167,18 +159,19 @@ namespace Meshes.Algorithms
         /// </summary>        
         private void ImplicitEulerSmoothing(TriangleMesh mesh)
         {
-            /// get n
-            var n = mesh.Vertices.Count;
-
             /// output vertex positions (after solving/smoothing)
             double[] xx, xy, xz;
             
             MeshLaplacian.GetEuclideanCoordinates(mesh, out xx, out xy, out xz);
 
-            var solver = QR.Create(MeshLaplacian.CreateLaplacian(mesh, Lambda, 1d).Compress(), order);
-            solver.Solve(xx);
-            solver.Solve(xy);
-            solver.Solve(xz);
+            var solver = QR.Create(MeshLaplacian.CreateLaplacian(mesh, Lambda, 1d).Compress());
+            
+            foreach (var currentIteration in Enumerable.Range(0, Iterations))
+            {
+                solver.Solve(xx);
+                solver.Solve(xy);
+                solver.Solve(xz);
+            }
 
             /// update mesh           
             MeshLaplacian.UpdateMesh(mesh, xx, xy, xz);
@@ -227,26 +220,26 @@ namespace Meshes.Algorithms
         /// <param name="mesh"></param>
         private void TriangleQualityOptimization(TriangleMesh mesh)
         {
-            /// get n
-            var n = mesh.Vertices.Count;
-            
-            /// output vertex positions (after solving/smoothing)
             double[] xx, xy, xz;
-            xx = xy = xz = null;
+            double[] dx, dy, dz;
 
-            /// TODO_A1 Task 6:
-            /// Implement triangle quality optimization (medium)
+            MeshLaplacian.GetEuclideanCoordinates(mesh, out xx, out xy, out xz);
 
+            var cotangensL = MeshLaplacian.CreateCotanLaplacian(mesh, 1d, 0d, true);
+            MeshLaplacian.ComputeDifferentialCoordinates(cotangensL.Compress(), xx, xy, xz, out dx, out dy, out dz);
 
-            /// update mesh           
-            MeshLaplacian.UpdateMesh(mesh, xx, xy, xz);            
+            xx = dx.Concat(xx.Select(x => x * Lambda)).ToArray();
+            xy = dy.Concat(xy.Select(x => x * Lambda)).ToArray();
+            xz = dz.Concat(xz.Select(x => x * Lambda)).ToArray();
+            
+            // Use uniform lambda weights for the position constraint and identity weights for the smoothing constraitn
+            var optimizationSolver = QR.Create(MeshLaplacian.CreateExtendedUniformLaplacian(mesh, Lambda).Compress());
+
+            optimizationSolver.Solve(xx);
+            optimizationSolver.Solve(xy);
+            optimizationSolver.Solve(xz);
+
+            MeshLaplacian.UpdateMesh(mesh, xx, xy, xz);       
         }
-
-
-        private QR qr;
-        private SparseMatrix L;       
-        private bool hasMatrix = false;
-        private double lambda = 1.0;
-        private const int order = 3;
     }    
 }
