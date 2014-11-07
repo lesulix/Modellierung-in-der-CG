@@ -26,7 +26,7 @@ namespace Meshes.Algorithms
 
         public enum Method
         {
-            Explicit_Euler, Implicit_Euler, LS_Optimization, TriangleQuality
+            Explicit_Euler, Implicit_Euler, LS_Optimization, TriangleQuality, EdgeSmoothing
         }
 
         /// <summary>
@@ -37,7 +37,8 @@ namespace Meshes.Algorithms
             Method.Explicit_Euler.ToString(), 
             Method.Implicit_Euler.ToString(), 
             Method.LS_Optimization.ToString(), 
-            Method.TriangleQuality.ToString(),
+            Method.TriangleQuality.ToString(), 
+            Method.EdgeSmoothing.ToString(),
         };
 
 
@@ -67,6 +68,9 @@ namespace Meshes.Algorithms
                     break;
                 case Method.TriangleQuality:
                     this.TriangleQualityOptimization(mesh);
+                    break;
+                case Method.EdgeSmoothing:
+                    this.EdgeSmoothingOptimization(mesh);
                     break;
 
             }
@@ -245,6 +249,32 @@ namespace Meshes.Algorithms
             optimizationSolver.Solve(xz);
 
             MeshLaplacian.UpdateMesh(mesh, xx, xy, xz);       
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="mesh"></param>
+        private void EdgeSmoothingOptimization(TriangleMesh mesh)
+        {
+            double[] xx, xy, xz;
+            double[] dx, dy, dz;
+
+            MeshLaplacian.GetEuclideanCoordinates(mesh, out xx, out xy, out xz);
+
+            xx = xx.Select(_ => 0d).Concat(xx.Select(x => x * Lambda)).ToArray();
+            xy = xy.Select(_ => 0d).Concat(xy.Select(x => x * Lambda)).ToArray();
+            xz = xz.Select(_ => 0d).Concat(xz.Select(x => x * Lambda)).ToArray();
+
+            // Use uniform lambda weights for the position constraint and identity weights for the smoothing constraitn
+            var optimizationSolver = QR.Create(MeshLaplacian.CreateExtendedCotanLaplacian(mesh, Lambda).Compress());
+
+            optimizationSolver.Solve(xx);
+            optimizationSolver.Solve(xy);
+            optimizationSolver.Solve(xz);
+
+            MeshLaplacian.UpdateMesh(mesh, xx, xy, xz);
         }
     }    
 }

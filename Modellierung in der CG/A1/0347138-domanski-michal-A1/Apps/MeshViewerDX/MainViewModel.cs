@@ -224,9 +224,13 @@
                 {
                     this.SmoothingSolver.SelectedMethod = MeshSmoothing.Method.TriangleQuality;
                 }
-                else
+                else if (value == MeshSmoothing.Method.LS_Optimization.ToString())
                 {
                     this.SmoothingSolver.SelectedMethod = MeshSmoothing.Method.LS_Optimization;
+                }
+                else
+                {
+                    this.SmoothingSolver.SelectedMethod = MeshSmoothing.Method.EdgeSmoothing;
                 }
                 this.SmoothingSolver.Clear();
             }
