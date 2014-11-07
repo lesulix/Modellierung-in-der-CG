@@ -149,13 +149,13 @@ namespace Meshes.Algorithms
                     sumOfWeights += halfEdge.Traits.Cotan;
                 }
 
-                sumOfAreas = Math.Max(EPSILON, normalized ? sumOfAreas : 1d);
+                var normalization = normalized ? sumOfWeights : sumOfAreas;
 
-                L.Entry(currentVertex.Index, currentVertex.Index, eye + lambda * sumOfWeights/sumOfAreas);
+                L.Entry(currentVertex.Index, currentVertex.Index, eye + lambda * sumOfWeights / normalization);
 
                 foreach (var halfEdge in currentVertex.Halfedges)
                 {
-                    L.Entry(currentVertex.Index, halfEdge.ToVertex.Index, lambda * -halfEdge.Traits.Cotan/sumOfAreas);
+                    L.Entry(currentVertex.Index, halfEdge.ToVertex.Index, lambda * -halfEdge.Traits.Cotan / normalization);
                 }
             }
       
@@ -298,9 +298,10 @@ namespace Meshes.Algorithms
                     var yToYNext = xiToYnext - xiToY;
                     var yPrevToY = xiToY - xiToYprev;
 
-                    // cot(alpha) = (u * v) / |u x v|
-                    var cotanVoronoiAlpha = yToYNext.Cotan(-xiToY);
-                    var cotanVoronoiBeta = (-yToYNext).Cotan(-xiToYnext);
+                    // clamp value to 0. As This would correspond to the point where the triangle gets obstruse,
+                    // the point effectively gets clamped to the edge of the triangle
+                    var cotanVoronoiAlpha = Math.Max(0d, yToYNext.Cotan(-xiToY));
+                    var cotanVoronoiBeta = Math.Max(0d, (-yToYNext).Cotan(-xiToYnext));
                     
                     // voronoi(V) = 1/8 * (|u|²*cot(beta) + |v|²*cotan(alpha)
                     var voronoiArea = 0.125d * (xiToY.LengthSquared() * cotanVoronoiBeta + xiToYnext.LengthSquared() * cotanVoronoiAlpha);
