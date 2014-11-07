@@ -138,13 +138,21 @@ namespace Meshes.Algorithms
             /// get current world positions            
             MeshLaplacian.GetEuclideanCoordinates(mesh, out xx, out xy, out xz);
 
-            var laplacian = MeshLaplacian.CreateLaplacian(mesh, -Lambda, 1f);
+            var laplacianDeflate = MeshLaplacian.CreateLaplacian(mesh, -Lambda, 1f).Compress();
+            // Use mu > -lambda as inflation
+            var laplacianInflate = MeshLaplacian.CreateLaplacian(mesh, Lambda * 1.1d, 1f).Compress();
 
             foreach (var currentIteration in Enumerable.Range(0, iterationCount))
             {
                 double[] dx, dy, dz;
 
-                MeshLaplacian.ComputeDifferentialCoordinates(laplacian.Compress(), xx, xy, xz, out dx, out dy, out dz);
+                MeshLaplacian.ComputeDifferentialCoordinates(laplacianDeflate, xx, xy, xz, out dx, out dy, out dz);
+
+                xx = dx;
+                xy = dy;
+                xz = dz;
+
+                MeshLaplacian.ComputeDifferentialCoordinates(laplacianInflate, xx, xy, xz, out dx, out dy, out dz);
 
                 xx = dx;
                 xy = dy;
@@ -166,12 +174,9 @@ namespace Meshes.Algorithms
 
             var solver = QR.Create(MeshLaplacian.CreateLaplacian(mesh, Lambda, 1d).Compress());
             
-            foreach (var currentIteration in Enumerable.Range(0, Iterations))
-            {
-                solver.Solve(xx);
-                solver.Solve(xy);
-                solver.Solve(xz);
-            }
+            solver.Solve(xx);
+            solver.Solve(xy);
+            solver.Solve(xz);
 
             /// update mesh           
             MeshLaplacian.UpdateMesh(mesh, xx, xy, xz);
