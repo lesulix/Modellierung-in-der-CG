@@ -172,10 +172,13 @@ namespace Meshes.Algorithms
 
             /// output vertex positions (after solving/smoothing)
             double[] xx, xy, xz;
-            xx = xy = xz = null;
+            
+            MeshLaplacian.GetEuclideanCoordinates(mesh, out xx, out xy, out xz);
 
-            /// TODO_A1 Task 4:
-            /// Implement implicit Euler smoothing (medium)
+            var solver = QR.Create(MeshLaplacian.CreateLaplacian(mesh, Lambda, 1d).Compress(), order);
+            solver.Solve(xx);
+            solver.Solve(xy);
+            solver.Solve(xz);
 
             /// update mesh           
             MeshLaplacian.UpdateMesh(mesh, xx, xy, xz);
