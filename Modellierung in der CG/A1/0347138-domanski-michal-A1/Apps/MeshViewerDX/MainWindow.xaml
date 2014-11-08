@@ -138,6 +138,7 @@
                                     <RowDefinition/>
                                     <RowDefinition/>
                                     <RowDefinition/>
+                                    <RowDefinition/>
                                 </Grid.RowDefinitions>
                                 <ComboBox  Grid.Row="0" Text="--- Select Model ---" ItemsSource="{Binding RenderTechniques}" SelectedItem="{Binding RenderTechnique}" IsEditable="True" IsReadOnly="True" Margin="3"/>
                                 <CheckBox  Grid.Row="1" IsChecked="{Binding IsRendering, ElementName=bbox1}" Margin="3">Render Box</CheckBox>
@@ -146,7 +147,8 @@
                                 <CheckBox  Grid.Row="4" IsChecked="{Binding IsRendering, ElementName=grid}" Margin="3">Render Grid</CheckBox>
                                 <CheckBox  Grid.Row="5" IsChecked="{Binding FlatShading}" Margin="3">Flat Shading</CheckBox>
                                 <CheckBox  Grid.Row="6" IsChecked="{Binding NormalMapping}" Margin="3">Normal Mapping</CheckBox>
-                                <Button   ToolTip="Normal Map"    Margin="3" Grid.Row="7" Grid.ColumnSpan="2" Command="{Binding OpenNormalMapCmd}">Open Normal Map</Button>
+                                <ComboBox Grid.Row="7" ItemsSource="{Binding SelectedCurvatureVisualizationTypes}" SelectedItem="{Binding SelectedCurvatureVisualization}" IsEditable="True" IsReadOnly="True" />
+                                <Button ToolTip="Normal Map"    Margin="3" Grid.Row="8" Grid.ColumnSpan="2" Command="{Binding OpenNormalMapCmd}">Open Normal Map</Button>
                             </Grid>
                         </Expander>
 

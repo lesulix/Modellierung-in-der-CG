@@ -282,7 +282,7 @@ namespace Meshes.Algorithms
         /// Store each angle-cotan at the (outgoing) halfedge of each vertex.
         /// Store each voronoi-area at the (outgoing) halfedge of 
         /// </summary>
-        private static void PrecomputeTraits(TriangleMesh mesh)
+        public static void PrecomputeTraits(TriangleMesh mesh)
         {
             /// compute all cotans
             /// store each cotan at the foot of each halfedge
@@ -329,6 +329,7 @@ namespace Meshes.Algorithms
 
                     halfedge.Traits.Cotan = meanCurvatureScalar;
                     halfedge.Traits.VoronoiRegionArea = voronoiArea;
+                    halfedge.Traits.Angle = Math.Abs(Math.Acos(Vector3.Dot(Vector3.Normalize(xiToY), Vector3.Normalize(xiToYnext))));
                 }
             }
         }
@@ -382,6 +383,6 @@ namespace Meshes.Algorithms
             {
                 throw new Exception("Serialization Error: " + ex.Message);
             }
-        } 
+        }
     }   
 }

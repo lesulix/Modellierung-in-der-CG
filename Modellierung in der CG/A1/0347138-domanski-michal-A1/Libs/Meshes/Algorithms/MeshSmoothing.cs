@@ -17,13 +17,6 @@ namespace Meshes.Algorithms
     /// </summary>
     public class MeshSmoothing
     {
-
-        /// TODO_A1 Task 7:
-        /// 7.	Implement edge-preserving smoothing (medium)
-        /// 
-        /// Add an additional smoothing method by adding it to
-        /// enum Method, IList MethodCollection and the method Smooth.
-
         public enum Method
         {
             Explicit_Euler, Implicit_Euler, LS_Optimization, TriangleQuality, EdgeSmoothing
@@ -121,12 +114,7 @@ namespace Meshes.Algorithms
             double[] xx, xy, xz;
             xx = xy = xz = null;
 
-            /// TODO_A1 Task 5:
-            /// 5.	Implement least-squares optimization smoothing (medium)
-            /// 
-            /// Hint: this function is provided in the documentation
-            /// as an example how to use the solver!
-
+            
             /// update mesh           
             MeshLaplacian.UpdateMesh(mesh, xx, xy, xz);
         }

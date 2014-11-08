@@ -30,6 +30,8 @@ namespace Meshes
         /// Stores the cotangens of the value of the 
         /// </summary>
         public double Cotan;
+
+        public double Angle;
         
         /// <summary>
         /// U,V Texture coordinate.
@@ -140,6 +142,10 @@ namespace Meshes
         /// </summary>
         public Vector3D MinCurvatureDirection;
 
+        public double GaussianCurvature;
+
+        public double MeanCurvature;
+
         /// <summary>
         /// Maximum principle curvature.
         /// </summary>
@@ -175,6 +181,8 @@ namespace Meshes
             //IsDifferential = false;
             //IsStiff = false;
 
+            GaussianCurvature = 0d;
+            MeanCurvature = 0d;
             MaxCurvature = 1.0;
             MinCurvature = 0.0;
             MaxCurvatureDirection = new Vector3D();

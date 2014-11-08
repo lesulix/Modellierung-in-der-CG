@@ -177,6 +177,30 @@
             }
         }
 
+        public enum CurvatureModeType { Gaussian, Mean, None }
+
+        public CurvatureModeType SelectedCurvatureRendering { get; set; }
+
+        public IEnumerable<string> SelectedCurvatureVisualizationTypes
+        {
+            get
+            {
+                yield return CurvatureModeType.Gaussian.ToString();
+                yield return CurvatureModeType.Mean.ToString();
+                yield return CurvatureModeType.None.ToString();
+            }
+        }
+
+        public string SelectedCurvatureVisualization
+        {
+            get { return SelectedCurvatureRendering.ToString(); }
+            set
+            {
+                SelectedCurvatureRendering = (CurvatureModeType) Enum.Parse(typeof(CurvatureModeType), value);
+                this.UpdateModel(Mesh, FlatShading ? Mesh3DUtilities.Mesh3DShading.Flat : Mesh3DUtilities.Mesh3DShading.Smooth);
+            }
+        }
+
         public string SelectedParameterizationMethod
         {
             get { return MeshParameterization.Instance.SelectedMethod.ToString(); }
@@ -200,12 +224,6 @@
                 }
             }
         }
-
-        /// TODO_A1 Task 7:
-        /// 7.	Implement edge-preserving smoothing (medium)
-        /// 
-        /// Add the new smoothing method to this property to
-        /// enable selection from the UI.
 
         public string SelectedSmoothingMethod
         {
@@ -328,7 +346,6 @@
 
         public MainViewModel()
         {
-            // TODO_A1: fill in your personal data
             this.Student = "0347138-domanski-michal-A1";
 
             // camera setup
@@ -376,6 +393,7 @@
             // render technique for curvature 
             this.RenderTechnique = Techniques.RenderBlinn;
 
+            this.SelectedCurvatureRendering = CurvatureModeType.None;
             this.FlatShading = false;
             this.ShowMesh2D = true;
             this.ShowImage = true;
@@ -713,13 +731,8 @@
             if (mesh == null) return;
             if (mesh.Vertices.Count == 0) return;
 
-            /// TODO_A1 Task 8:
-            /// 8.	Compute and visualize mean curvature and Gaussian curvature
-            /// 
-            /// Add mean curvature and Gaussian curvature attributes to the vertex
-            /// traits. Write a function that updates the curvature values based
-            /// on the current state of the mesh. Call the function here
-            /// to update the curvature values whenever the mesh changes.
+            if (SelectedCurvatureRendering == CurvatureModeType.Gaussian || SelectedCurvatureRendering == CurvatureModeType.Mean)
+                MeshLaplacian.PrecomputeTraits(mesh);
 
             var box = mesh.Traits.BoundingBox;
             var scale = 2f / (box.Maximum - box.Minimum).Length();
@@ -751,23 +764,79 @@
             // get geometry              
             var model = mesh.ToMeshGeometry3D(meshShading, false);
 
-            /// TODO_A1 Task 8:
-            /// 8.	Compute and visualize mean curvature and Gaussian curvature
-            ///
-            /// Change the coloring to reflect the mean or Gaussian curvature 
-            /// that you calculated. You might want to extend the UI
-            /// to let the user choose the type of curvature.
+            if (SelectedCurvatureRendering == CurvatureModeType.Gaussian)
+            {
+                MinCurvature = Double.MaxValue;
+                MaxCurvature = Double.MinValue;
 
-            if (meshShading == Mesh3DUtilities.Mesh3DShading.Smooth)
+                foreach (var vertex in mesh.Vertices)
+                {
+                    var angleSum = vertex.Halfedges.Sum(he => he.Traits.Angle);
+                    var areaSum = vertex.Halfedges.Sum(he => he.Traits.VoronoiRegionArea);
+
+                    // K_g(x) = (2*Pi - Sum(phi)) / A_mixed
+                    vertex.Traits.GaussianCurvature = (2d*Math.PI - angleSum) / areaSum;
+                    MinCurvature = Math.Min(vertex.Traits.GaussianCurvature, MinCurvature);
+                    MaxCurvature = Math.Max(vertex.Traits.GaussianCurvature, MaxCurvature);
+                }
+
+                int ii = 0;
+                var colors = new Color4[3 * mesh.Faces.Count];
+                foreach (var f in mesh.Faces)
+                {
+                    foreach (var v in f.Vertices)
+                    {
+                        int idx = (int)(254 * ((v.Traits.GaussianCurvature - MinCurvature) / (MaxCurvature - MinCurvature)));
+                        idx = idx < 0 ? 0 : idx;
+                        idx = idx > 254 ? 254 : idx;
+                        var c = JetMap255[idx];
+                        colors[ii++] = c.ToColor4();
+                    }
+                }
+                model.Colors = colors;
+            }
+            else if (SelectedCurvatureRendering == CurvatureModeType.Mean)
+            {
+                MinCurvature = Double.MaxValue;
+                MaxCurvature = Double.MinValue;
+
+                foreach (var vertex in mesh.Vertices)
+                {
+                    var weightSum = 0d;
+                    var areaSum = 0d;
+
+                    foreach (var halfEdge in vertex.Halfedges)
+                    {
+                        weightSum += halfEdge.Traits.Cotan*
+                                   (halfEdge.FromVertex.Traits.Position - halfEdge.ToVertex.Traits.Position).Length();
+                        areaSum += halfEdge.Traits.VoronoiRegionArea;
+                    }
+                    // K_g(x) = 0.5 * Sum(weight * edgeLength) / A_mixed
+                    vertex.Traits.MeanCurvature = weightSum / areaSum;
+                    MinCurvature = Math.Min(vertex.Traits.MeanCurvature, MinCurvature);
+                    MaxCurvature = Math.Max(vertex.Traits.MeanCurvature, MaxCurvature);
+                }
+
+                int ii = 0;
+                var colors = new Color4[3 * mesh.Faces.Count];
+                foreach (var f in mesh.Faces)
+                {
+                    foreach (var v in f.Vertices)
+                    {
+                        int idx = (int)(254 * ((v.Traits.MeanCurvature - MinCurvature) / (MaxCurvature - MinCurvature)));
+                        idx = idx < 0 ? 0 : idx;
+                        idx = idx > 254 ? 254 : idx;
+                        var c = JetMap255[idx];
+                        colors[ii++] = c.ToColor4();
+                    }
+                }
+                model.Colors = colors;
+            }
+            else if (meshShading == Mesh3DUtilities.Mesh3DShading.Smooth)
             {
                 var colors = new Color4[mesh.Vertices.Count];
                 foreach (var v in mesh.Vertices)
                 {
-                    int idx = (int)(254 * (((v.Traits.MinCurvature + v.Traits.MaxCurvature) / 2 - MinCurv) / (MaxCurv)));
-                    idx = idx < 0 ? 0 : idx;
-                    idx = idx > 254 ? 254 : idx;
-                    var c = JetMap255[idx];
-                    //colors[v.Index] = c.ToColor4();
                     colors[v.Index] = (Color4)Color.WhiteSmoke;
                 }
                 model.Colors = colors;
@@ -780,11 +849,6 @@
                 {
                     foreach (var v in f.Vertices)
                     {
-                        int idx = (int)(254 * (((v.Traits.MinCurvature + v.Traits.MaxCurvature) / 2 - MinCurv) / (MaxCurv)));
-                        idx = idx < 0 ? 0 : idx;
-                        idx = idx > 254 ? 254 : idx;
-                        var c = JetMap255[idx];
-                        //colors[ii++] = c.ToColor4();
                         colors[ii++] = (Color4)Color.WhiteSmoke;
                     }
                 }
@@ -826,6 +890,9 @@
             this.SubTitle = string.Format("V:{0} | T:{1} | E:{2}", mesh.Vertices.Count, mesh.Faces.Count, mesh.Edges.Count);
         }
 
+        double MaxCurvature { get; set; }
+        double MinCurvature { get; set; }
+
         #endregion
 
         #region Static Lists and Color Map
@@ -838,7 +905,7 @@
             Techniques.RenderNormals,
             Techniques.RenderTangents, 
             Techniques.RenderTexCoords,
-            Techniques.RenderWires,                                 
+            Techniques.RenderWires,  
         };
 
         private static readonly IList<string> textureImages = new List<string>()
