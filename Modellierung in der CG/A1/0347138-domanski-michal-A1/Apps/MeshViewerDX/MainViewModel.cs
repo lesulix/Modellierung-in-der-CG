@@ -780,7 +780,6 @@
                     MaxCurvature = Math.Max(vertex.Traits.GaussianCurvature, MaxCurvature);
                 }
 
-                int ii = 0;
                 var colors = new Color4[3 * mesh.Faces.Count];
                 foreach (var f in mesh.Faces)
                 {
@@ -790,7 +789,7 @@
                         idx = idx < 0 ? 0 : idx;
                         idx = idx > 254 ? 254 : idx;
                         var c = JetMap255[idx];
-                        colors[ii++] = c.ToColor4();
+                        colors[v.Index] = c.ToColor4();
                     }
                 }
                 model.Colors = colors;
@@ -802,22 +801,22 @@
 
                 foreach (var vertex in mesh.Vertices)
                 {
-                    var weightSum = 0d;
+                    var weightSum = Vector3.Zero;
                     var areaSum = 0d;
 
                     foreach (var halfEdge in vertex.Halfedges)
                     {
-                        weightSum += halfEdge.Traits.Cotan*
-                                   (halfEdge.FromVertex.Traits.Position - halfEdge.ToVertex.Traits.Position).Length();
+                        weightSum += 
+                                   (halfEdge.ToVertex.Traits.Position - halfEdge.FromVertex.Traits.Position)
+                                   * (float) halfEdge.Traits.Cotan;
                         areaSum += halfEdge.Traits.VoronoiRegionArea;
                     }
-                    // K_g(x) = 0.5 * Sum(weight * edgeLength) / A_mixed
-                    vertex.Traits.MeanCurvature = weightSum / areaSum;
+                    // K_g(x) = 0.25 * |Sum(weight * edgeLength)| / A_mixed
+                    vertex.Traits.MeanCurvature = 0.25d * (weightSum.Length() / areaSum);
                     MinCurvature = Math.Min(vertex.Traits.MeanCurvature, MinCurvature);
                     MaxCurvature = Math.Max(vertex.Traits.MeanCurvature, MaxCurvature);
                 }
 
-                int ii = 0;
                 var colors = new Color4[3 * mesh.Faces.Count];
                 foreach (var f in mesh.Faces)
                 {
@@ -827,7 +826,7 @@
                         idx = idx < 0 ? 0 : idx;
                         idx = idx > 254 ? 254 : idx;
                         var c = JetMap255[idx];
-                        colors[ii++] = c.ToColor4();
+                        colors[v.Index] = c.ToColor4();
                     }
                 }
                 model.Colors = colors;
