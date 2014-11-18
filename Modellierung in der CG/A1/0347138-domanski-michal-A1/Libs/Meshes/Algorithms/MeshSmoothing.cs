@@ -76,6 +76,8 @@ namespace Meshes.Algorithms
         /// </summary>
         public double Lambda { get; set; }
 
+        public double Mu { get; set; }
+
         /// <summary>
         /// 
         /// </summary>
@@ -131,8 +133,7 @@ namespace Meshes.Algorithms
             MeshLaplacian.GetEuclideanCoordinates(mesh, out xx, out xy, out xz);
 
             var laplacianDeflate = MeshLaplacian.CreateLaplacian(mesh, -Lambda, 1f).Compress();
-            // Use mu > -lambda as inflation
-            var laplacianInflate = MeshLaplacian.CreateLaplacian(mesh, Lambda * 1.1d, 1f).Compress();
+            var laplacianInflate = MeshLaplacian.CreateLaplacian(mesh, Mu, 1f).Compress();
 
             foreach (var currentIteration in Enumerable.Range(0, iterationCount))
             {
@@ -223,13 +224,16 @@ namespace Meshes.Algorithms
             MeshLaplacian.GetEuclideanCoordinates(mesh, out xx, out xy, out xz);
 
             var cotangensL = MeshLaplacian.CreateCotanLaplacian(mesh, 1d, 0d, true);
+            // Create first n rows of the Linear equation system, L_cot * x
             MeshLaplacian.ComputeDifferentialCoordinates(cotangensL.Compress(), xx, xy, xz, out dx, out dy, out dz);
 
+            // Attach the soft constraints, resulting in the rhs : W_L * f | W_P * V_d, where W_L is the identity
+            // f are the gradients computed using cotan weights and W_P are constant lambda weights
             xx = dx.Concat(xx.Select(x => x * Lambda)).ToArray();
             xy = dy.Concat(xy.Select(x => x * Lambda)).ToArray();
             xz = dz.Concat(xz.Select(x => x * Lambda)).ToArray();
             
-            // Use uniform lambda weights for the position constraint and identity weights for the smoothing constraitn
+            // W_L*L | W_P where W_L is the identity, L is the uniform laplacian and W_P are constant lambda weights
             var optimizationSolver = QR.Create(MeshLaplacian.CreateExtendedUniformLaplacian(mesh, Lambda).Compress());
 
             optimizationSolver.Solve(xx);
@@ -251,11 +255,12 @@ namespace Meshes.Algorithms
 
             MeshLaplacian.GetEuclideanCoordinates(mesh, out xx, out xy, out xz);
 
+            // Compute the rhs of the LES : W_L * f | W_P * V_d, where f is null, W_L is the identity W_P are constant lambda weights
             xx = xx.Select(_ => 0d).Concat(xx.Select(x => x * Lambda)).ToArray();
             xy = xy.Select(_ => 0d).Concat(xy.Select(x => x * Lambda)).ToArray();
             xz = xz.Select(_ => 0d).Concat(xz.Select(x => x * Lambda)).ToArray();
 
-            // Use uniform lambda weights for the position constraint and identity weights for the smoothing constraitn
+            // W_L*L | W_P where W_L is the identity, L is the cotans laplacian and W_P are constant lambda weights
             var optimizationSolver = QR.Create(MeshLaplacian.CreateExtendedCotanLaplacian(mesh, Lambda).Compress());
 
             optimizationSolver.Solve(xx);

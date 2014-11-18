@@ -159,6 +159,7 @@
                                     <RowDefinition />
                                     <RowDefinition />
                                     <RowDefinition />
+                                    <RowDefinition />
                                 </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="1*" />
@@ -168,6 +169,8 @@
                                 <CheckBox ToolTip="Normalized"        Margin="3" Grid.Row="2" Grid.ColumnSpan="2" IsChecked="{Binding LaplacianNormalize}">Normalized</CheckBox>
                                 <TextBox  ToolTip="Lambda"            Margin="3" Grid.Row="3" Grid.Column="0" Text="{Binding SmoothingSolver.Lambda}"/>
                                 <Slider   ToolTip="Lambda"            Margin="3" Grid.Row="3" Grid.Column="1" Value="{Binding SmoothingSolver.Lambda}" Minimum="0" Maximum="5" IsSnapToTickEnabled="True"  TickFrequency="0.01"/>
+                                <TextBox  ToolTip="Mu"            Margin="3" Grid.Row="4" Grid.Column="0" Text="{Binding SmoothingSolver.Mu}"/>
+                                <Slider   ToolTip="Mu"            Margin="3" Grid.Row="4" Grid.Column="1" Value="{Binding SmoothingSolver.Mu}" Minimum="0" Maximum="5" IsSnapToTickEnabled="True"  TickFrequency="0.01"/>
                             </Grid>
                         </Expander>
 

@@ -151,6 +151,8 @@ namespace Meshes.Algorithms
 
                 var normalization = normalized ? sumOfWeights : sumOfAreas;
 
+                // In normalized case diagonal equates to lambda * 1, for the other case to the sum of the
+                // cotan entries normalized by the voronoi area
                 L.Entry(currentVertex.Index, currentVertex.Index, eye + lambda * sumOfWeights / normalization);
 
                 foreach (var halfEdge in currentVertex.Halfedges)
